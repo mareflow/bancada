@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setor Bancada | TurboSul - Controle de Produção</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-turbo-teal { background-color: #0D9488; }
+        .bg-turbo-blue { background-color: #2563EB; }
+        .bg-turbo-orange { background-color: #EA580C; }
+        .bg-turbo-red { background-color: #DC2626; }
+        
+        .checklist-scroll::-webkit-scrollbar { width: 6px; }
+        .checklist-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .checklist-scroll::-webkit-scrollbar-thumb { background: #64748b; border-radius: 10px; }
+        
+        .os-card-selected {
+            border-left: 4px solid #2563EB;
+            background-color: #f8fafc;
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen overflow-hidden">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center space-x-4">
+            <img src="https://i.postimg.cc/Jh5Jvrc9/IMG-7901.png" alt="TurboSul Logo" class="h-10">
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-900 uppercase">TurboSul - Controle de Produção</h1>
+                <p class="text-xs text-slate-500 font-medium">Gerenciamento de Ordens de Serviço</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6 text-xs font-bold text-slate-400">
+            <button class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-200 transition">Quadro de Produção</button>
+            <div class="flex items-center space-x-3 border-l pl-6 border-slate-200">
+                <span>BR</span> <span class="text-slate-800 uppercase mr-4">Português</span>
+                <div class="text-right border-l pl-6">
+                    <p class="text-sm font-bold text-slate-800 leading-none">Administrador</p>
+                    <p class="text-[10px] text-turbo-blue uppercase tracking-wider">Setor Bancada</p>
+                </div>
+                <button onclick="window.location.href='index.html'" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition ml-4">Sair</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-64px)] overflow-hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-80 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+                <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 italic">Ordens na Fila</h2>
+            </div>
+            <div id="os-queue-container" class="p-4 space-y-4">
+                <div class="p-8 text-center text-slate-400 animate-pulse italic text-xs">Carregando fila...</div>
+            </div>
+        </aside>
+
+        <!-- MAIN WORKSPACE -->
+        <main class="flex-1 overflow-y-auto p-6 bg-slate-50">
+            <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center">
+                <span class="w-1 h-8 bg-turbo-blue mr-3 rounded-full"></span> Setor: Bancada
+            </h2>
+
+            <!-- EMPTY STATE -->
+            <div id="empty-state" class="flex flex-col items-center justify-center h-[60vh] text-slate-300">
+                <i class="fa-solid fa-toolbox text-6xl mb-4 opacity-20"></i>
+                <p class="text-lg font-bold uppercase tracking-widest">Selecione uma Ordem para Iniciar</p>
+            </div>
+
+            <!-- WORKSPACE ATIVO -->
+            <div id="workspace" class="hidden space-y-6 fade-in">
+                <!-- PAINEL OS -->
+                <div class="bg-turbo-blue text-white rounded-xl p-5 shadow-lg relative overflow-hidden flex justify-between items-center">
+                    <div class="relative z-10">
+                        <h2 id="display-os-id" class="text-4xl font-black italic">OS-XXXX</h2>
+                        <p id="display-os-desc" class="text-sm font-medium opacity-90 uppercase tracking-widest">CLIENTE | MODELO</p>
+                    </div>
+                    
+                    <div class="bg-slate-900/40 p-4 rounded-xl backdrop-blur-md border border-white/10 flex items-center space-x-4">
+                        <div class="p-2 bg-turbo-teal rounded-lg"><i class="fa-solid fa-wrench"></i></div>
+                        <div>
+                            <p class="text-[9px] text-slate-300 font-bold uppercase">Produtividade</p>
+                            <p class="text-xs font-black uppercase">Setor em Produção Ativa</p>
+                        </div>
+                        <button class="bg-turbo-teal hover:bg-teal-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition">Iniciar Limpeza Setor</button>
+                    </div>
+                </div>
+
+                <!-- GRID DINÂMICO -->
+                <div id="components-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
+                    <!-- Cards via JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL CONFIRMAÇÃO -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-turbo-blue">
+            <i class="fa-solid fa-route text-turbo-blue text-4xl mb-4"></i>
+            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase italic">Confirmar Roteamento?</h4>
+            <p id="confirm-msg" class="text-slate-500 text-sm mb-6 font-medium">A peça será movida para o próximo setor.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition uppercase text-[10px]">Cancelar</button>
+                <button id="btn-confirm-final" class="flex-1 bg-turbo-blue text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition uppercase text-[10px]">Sim, Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/workbench-queue';
+        const API_ROUTING = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
+        
+        let selectedOS = null;
+        let queueData = [];
+
+        // Checklist fixo conforme o conceito da Bancada
+        const WORKBENCH_CHECKLIST = [
+            "BATER CENTRAIS",
+            "SEPARAR CT",
+            "ROSCA",
+            "EXTRAÇÃO PRISIONEIRO",
+            "ACABAMENTO SOLDA",
+            "MONTAGEM WASTEGATE"
+        ];
+
+        window.onload = fetchQueue;
+
+        async function fetchQueue() {
+            try {
+                const res = await fetch(API_QUEUE);
+                const data = await res.json();
+                // Suporte unísson (objeto único ou array)
+                queueData = Array.isArray(data) ? data : (data && data.os_id ? [data] : []);
+                renderQueue();
+            } catch (e) { 
+                console.error("Erro fila bancada:", e); 
+                document.getElementById('os-queue-container').innerHTML = '<p class="text-red-500 text-xs p-4">Erro de conexão.</p>';
+            }
+        }
+
+        function renderQueue() {
+            const container = document.getElementById('os-queue-container');
+            container.innerHTML = '';
+            queueData.forEach(os => {
+                const isSelected = selectedOS?.os_id === os.os_id ? 'os-card-selected' : '';
+                const card = document.createElement('div');
+                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${isSelected}`;
+                card.onclick = () => selectOS(os);
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-sm font-black text-slate-900 tracking-tight">${os.business_id}</span>
+                        <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md bg-blue-100 text-blue-600">${os.urgency || 'Normal'}</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-700 uppercase mb-1">${os.model}</p>
+                    <p class="text-[10px] font-medium text-slate-500 uppercase truncate">${os.client}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function selectOS(os) {
+            selectedOS = os;
+            renderQueue();
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('workspace').classList.remove('hidden');
+            document.getElementById('display-os-id').innerText = os.business_id;
+            document.getElementById('display-os-desc').innerText = `${os.model} | ${os.client}`;
+            renderComponentCards();
+        }
+
+        function renderComponentCards() {
+            const grid = document.getElementById('components-grid');
+            grid.innerHTML = '';
+            
+            const componentsToShow = selectedOS.components_to_render || [];
+
+            componentsToShow.forEach(name => {
+                // Memória do Tracking
+                const trackingData = (selectedOS.tracking || []).find(t => t.component === name);
+                const isRoteada = !!trackingData && trackingData.stage !== 'BANCADA';
+
+                const cardStyle = isRoteada ? 'opacity-40 grayscale pointer-events-none' : '';
+                const badgeText = isRoteada ? `EM ${trackingData.stage}` : 'Bancada';
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 ${cardStyle}`;
+                card.id = `card-comp-${name}`;
+
+                card.innerHTML = `
+                    <div class="px-5 py-4 bg-slate-50 border-b flex justify-between items-center">
+                        <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
+                        <span class="text-[8px] font-black uppercase px-2 py-0.5 bg-turbo-blue text-white rounded-full">${badgeText}</span>
+                    </div>
+                    <div class="p-5 flex-grow flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Checklist de Execução:</p>
+                            <span class="text-[8px] font-bold text-turbo-red border border-turbo-red px-1.5 rounded uppercase cursor-pointer hover:bg-red-50">Entrar em Retrabalho</span>
+                        </div>
+                        <div class="checklist-scroll max-h-48 overflow-y-auto space-y-2.5 mb-6 pr-1">
+                            ${WORKBENCH_CHECKLIST.map(item => `
+                                <label class="flex items-center space-x-3 cursor-pointer group">
+                                    <input type="checkbox" ${isRoteada ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-blue focus:ring-turbo-blue transition" data-item="${item}">
+                                    <span class="text-[10px] font-bold text-slate-600 group-hover:text-slate-900 transition uppercase">${item}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="mt-auto space-y-3">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaminhar Para:</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="sendPiece(this, '${name}', 'RETIFICA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-200 transition">Retífica</button>
+                                <button onclick="sendPiece(this, '${name}', 'SOLDA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-200 transition">Solda</button>
+                                <button onclick="sendPiece(this, '${name}', 'METROLOGIA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-200 transition">Metrologia</button>
+                                <button class="py-2 border bg-turbo-blue text-white text-[9px] font-black uppercase rounded-lg opacity-50 cursor-default">Bancada</button>
+                            </div>
+                            <button onclick="sendPiece(this, '${name}', 'MONTAGEM')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-100">
+                                Pronto p/ Montagem
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function sendPiece(btn, pieceName, target) {
+            const modal = document.getElementById('modal-confirm');
+            const confirmBtn = document.getElementById('btn-confirm-final');
+            document.getElementById('confirm-msg').innerText = `Confirmar encaminhamento de ${pieceName} para ${target}?`;
+            modal.classList.remove('hidden');
+
+            confirmBtn.onclick = async () => {
+                modal.classList.add('hidden');
+                btn.disabled = true;
+                const originalText = btn.innerText;
+                btn.innerText = 'ENVIANDO...';
+
+                const card = document.getElementById(`card-comp-${pieceName}`);
+                const services = Array.from(card.querySelectorAll('input:checked')).map(i => i.dataset.item);
+
+                const payload = {
+                    os_id: selectedOS.os_id,
+                    component: pieceName,
+                    target: target,
+                    executed_services: services
+                };
+
+                try {
+                    const res = await fetch(API_ROUTING, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
+                        btn.innerHTML = `<i class="fa-solid fa-check mr-1"></i> OK: ${target}`;
+                    } else {
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                        alert("Erro ao rotear peça.");
+                    }
+                } catch (e) {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    alert("Falha na conexão.");
+                }
+            };
+        }
+
+        function closeModal() { document.getElementById('modal-confirm').classList.add('hidden'); }
+    </script>
+</body>
+</html>
