@@ -256,9 +256,9 @@ function renderComponents() {
                         <button onclick="sendTo(this, '${name}', 'SOLDA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Solda</button>
                         <button onclick="sendTo(this, '${name}', 'METROLOGIA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
                         
-                        ${name === 'Eixo' ? `
-                            <button onclick="sendTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
-                        ` : ''}
+                        ${name.toUpperCase() === 'EIXO' ? `
+                <button onclick="sendTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
+            ` : ''}
 
                         <button onclick="sendTo(this, '${name}', 'MONTAGEM')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl shadow-lg mt-1 transition hover:bg-emerald-700 disabled:opacity-30">Pronto p/ Montagem</button>
                     </div>
