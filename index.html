@@ -230,7 +230,14 @@
     }
 
     function selectOS(id) {
-        selectedOS = queueData.find(o => o.os_id === id);
+        // CORREÇÃO: Busca por os_id, id ou service_order_id para garantir compatibilidade e não bugar
+        selectedOS = queueData.find(o => (o.os_id === id || o.id === id || o.service_order_id === id));
+        
+        if (!selectedOS) {
+            console.error("❌ Erro: OS não foi encontrada no array queueData para o ID:", id);
+            return;
+        }
+
         specialItems = [];
         
         document.querySelectorAll('#os-list > div').forEach(c => c.classList.remove('os-selected'));
