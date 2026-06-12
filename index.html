@@ -30,11 +30,10 @@
             </div>
         </div>
         <div class="flex items-center space-x-6">
-            <div class="text-right border-r pr-6 border-slate-200">
-                <p class="text-sm font-bold leading-none">Técnico de Bancada</p>
-                <p class="text-[10px] text-turbo-indigo font-black uppercase tracking-wider">Setor Bancada</p>
+            <div class="text-right pr-4">
+                <p class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Setor Bancada</p>
             </div>
-            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold transition">Sair</button>
+            <button onclick="window.location.href='https://mareflow.github.io/turbosul-login/'" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold transition">Sair</button>
         </div>
     </header>
 
@@ -151,6 +150,7 @@
     const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
     
     let selectedOS = null;
+    let queueData = []; // Declarado globalmente para suportar o filtro preventivo
     let specialItems = [];
 
     // LISTA TÉCNICA INTEGRAL (TRANSCRIÇÃO DAS IMAGENS)
@@ -164,29 +164,85 @@
         'REPAROS': ['FABRICAÇÃO MANCAL R.', 'FABRICAÇÃO MANCAL A.', 'PASSE EXTERNO M. RADIAL', 'PASSE INTERNO M. RADIAL', 'FACEAMENTO M. RADIAL', 'PASSE NA FLANGE', 'ADAPTAÇÃO DE FLANGE', 'SOLDA PROT. TÉRMICO', 'PRODUZIR PROT. TÉRMICO', 'FABRICAÇÃO ESPAÇADOR R', 'FABRICAÇÃO COLAR', 'CALÇO DE ALTURA']
     };
 
-    // BUSCA FILA AGRUPADA (N8N)
+    // BUSCA FILA AGRUPADA (N8N) - COM FILTRO DE PEÇAS JÁ CONCLUÍDAS
     async function fetchQueue() {
-        const res = await fetch(API_QUEUE);
-        const data = await res.json();
-        const list = document.getElementById('os-list');
-        list.innerHTML = data.map(os => `
-            <div onclick="selectOS(${JSON.stringify(os).replace(/"/g, '&quot;')})" class="p-5 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 mb-2 mx-4 mt-2 rounded-xl shadow-sm" id="card-${os.os_id}">
-                <div class="flex justify-between font-black text-sm"><span>${os.business_id}</span><span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded">${os.urgency}</span></div>
-                <p class="text-xs font-bold text-slate-700 mt-1">${os.model}</p>
-                <p class="text-[10px] text-slate-500 truncate">${os.client}</p>
-            </div>
-        `).join('');
+        try {
+            const res = await fetch(API_QUEUE);
+            const data = await res.json();
+            let rawQueue = Array.isArray(data) ? data : (data.data || []);
+
+            // Filtro Inteligente: Remove OSs onde todas as peças já foram enviadas para a Montagem/Balanceamento
+            if (rawQueue.length > 0) {
+                const osIds = rawQueue.map(os => os.service_order_id || os.os_id || os.id);
+                
+                const { data: trackings, error } = await supabaseClient
+                    .from('component_tracking')
+                    .select('*')
+                    .in('service_order_id', osIds);
+                    
+                if (!error && trackings) {
+                    rawQueue = rawQueue.filter(os => {
+                        const osId = os.service_order_id || os.os_id || os.id;
+                        const osTracking = trackings.filter(t => t.service_order_id === osId);
+                        
+                        const componentsToRender = [...new Set(os.components_to_render || [])];
+                        if (componentsToRender.length === 0) return true;
+
+                        // Se ainda existir alguma peça cujo setor atual NÃO é pós-bancada, mantém na fila
+                        const hasPendingPiece = componentsToRender.some(compName => {
+                            const p = osTracking.find(t => (t.component_name || t.component || '').toUpperCase() === compName.toUpperCase());
+                            const stage = p ? (p.target_sector || p.current_stage || p.stage || '').toUpperCase().trim() : '';
+                            const postSectors = ['MONTAGEM', 'BALANCEAMENTO', 'BALANCEAMENTO FINAL', 'QUALIDADE', 'EXPEDICAO', 'EXPEDIÇÃO'];
+                            return !postSectors.includes(stage);
+                        });
+
+                        // Pré-carrega o tracking na memória
+                        os.full_tracking = osTracking;
+
+                        return hasPendingPiece;
+                    });
+                }
+            }
+
+            queueData = rawQueue;
+            renderSidebar();
+        } catch (e) {
+            console.error("Erro ao carregar fila da Bancada:", e);
+        }
     }
 
-    function selectOS(os) {
-        selectedOS = os;
+    function renderSidebar() {
+        const list = document.getElementById('os-list');
+        if (queueData.length === 0) {
+            list.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs italic">Fila Vazia.</div>';
+            return;
+        }
+        list.innerHTML = queueData.map(os => {
+            const isSelected = selectedOS?.os_id === os.os_id ? 'os-selected' : '';
+            return `
+                <div onclick="selectOS('${os.os_id}')" class="p-5 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 mb-2 mx-4 mt-2 rounded-xl shadow-sm ${isSelected}" id="card-${os.os_id}">
+                    <div class="flex justify-between font-black text-sm"><span>${os.business_id}</span><span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded">${os.urgency}</span></div>
+                    <p class="text-xs font-bold text-slate-700 mt-1">${os.model}</p>
+                    <p class="text-[10px] text-slate-500 truncate">${os.client}</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function selectOS(id) {
+        selectedOS = queueData.find(o => o.os_id === id);
         specialItems = [];
+        
         document.querySelectorAll('#os-list > div').forEach(c => c.classList.remove('os-selected'));
-        document.getElementById(`card-${os.os_id}`).classList.add('os-selected');
+        const cardEl = document.getElementById(`card-${id}`);
+        if (cardEl) cardEl.classList.add('os-selected');
+        
         document.getElementById('welcome-screen').classList.add('hidden');
         document.getElementById('main-workspace').classList.remove('hidden');
-        document.getElementById('display-os').innerText = os.business_id;
-        document.getElementById('display-desc').innerText = `${os.client} | ${os.model}`;
+        document.getElementById('display-os').innerText = selectedOS.business_id;
+        document.getElementById('display-desc').innerText = `${selectedOS.client} | ${selectedOS.model}`;
+        
+        // Os trackings já vêm pré-carregados da fila inicial
         renderComponents();
     }
 
