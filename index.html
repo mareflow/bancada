@@ -705,6 +705,7 @@
                             <div class="absolute -left-[9px] top-1 w-4 h-4 bg-turbo-indigo rounded-full border-2 border-white shadow-sm"></div>
                             <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
                             <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[9px] text-turbo-indigo italic mt-1 font-semibold leading-relaxed">"${ev.details}"</p>` : ''}
                         </div>`).join('');
                 } else {
                     timeline.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center uppercase py-4">Iniciando histórico...</p>';
